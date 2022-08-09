@@ -227,14 +227,8 @@ class HNGCL(torch.nn.Module):
             
             
             losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
-                                     / (between_sim[:, i * batch_size:(i + 1) * batch_size].diag() +  weight * hard_sim.sum(1))))
-
-
-            # losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
-            #                          / (refl_sim.sum(1) + between_sim.sum(1) + weight * hard_sim.sum(1)
-            #                             - refl_sim[:, i * batch_size:(i + 1) * batch_size].diag()))) #+ hard_sim_inter.sum(1)
-
-
+                                     / (refl_sim.sum(1) + between_sim.sum(1) + weight * hard_sim.sum(1)
+                                        - refl_sim[:, i * batch_size:(i + 1) * batch_size].diag()))) #+ hard_sim_inter.sum(1)
             # losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
             #                          / (between_sim[:, i * batch_size:(i + 1) * batch_size].diag() + hard_sim.sum(1) + hard_sim_inter.sum(1)
             #                             )))
