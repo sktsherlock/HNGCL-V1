@@ -125,7 +125,7 @@ def train_hard(drop_weights1, AD_True: int, AD_hard: int, SE: int, True_gap=1, F
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss(z1, z2, z3, batch_size=256) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss(z1, z2, z3, batch_size=64) #+ Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
