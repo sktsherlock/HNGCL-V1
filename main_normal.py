@@ -246,7 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--base_model', type=str, default= 'GCNConv')
     parser.add_argument('--k', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.01)
-    parser.add_argument('--num_hidden', type=int, default=128)
+    parser.add_argument('--num_hidden', type=int, default=64)
     parser.add_argument('--num_proj_hidden', type=int, default=64)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--drop_edge_rate_1', type=float, default=0.4)
