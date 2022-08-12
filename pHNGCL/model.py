@@ -246,7 +246,6 @@ class HNGCL(torch.nn.Module):
         # ! Add mixup
         for i in range(num_batches):
             mask = indices[i * batch_size:(i + 1) * batch_size]
-            refl_sim = f(self.sim(z1[mask], z1))  # [B, N]
             between_sim = f(self.sim(z1[mask], z2))  # [B, N]
             hard_sim = f(self.sim(z1[mask], z3))
             # hard_sim_inter = f(self.sim(z2[mask], z3))
