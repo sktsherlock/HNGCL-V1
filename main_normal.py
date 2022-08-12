@@ -230,7 +230,7 @@ def record_hyper_parameter(result_file, param):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:0')
-    parser.add_argument('--dataset', type=str, default='Coauthor_PHY')
+    parser.add_argument('--dataset', type=str, default='Coauthor-Phy')
     # parser.add_argument('--seed', type=int, default=39788)
     parser.add_argument('--seed', type=int, default=120456)#120546
     parser.add_argument('--verbose', type=str, default='train,eval,final')
