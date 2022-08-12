@@ -116,6 +116,10 @@ def train_hard(drop_weights1, AD_True: int, AD_hard: int, SE: int, True_gap=1, F
             discriminator_optimizer.step()
             if loss_Dis.item() < False_gap:
                 break
+        import gc
+        del z3
+        gc.collect()
+
 
     for i in range(AD_hard):  # 使生成的真实的样本 变得困难
         discriminator.requires_grad_(False)

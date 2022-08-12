@@ -280,11 +280,15 @@ class HNGCL(torch.nn.Module):
             l2 = self.semi_loss(h2, h1)
         else:
             l1 = self.batched_semi_loss(h1, h2, h3, batch_size, weight= weight)
+            torch.cuda.empty_cache()
             l2 = self.batched_semi_loss(h2, h1, h3, batch_size, weight= weight)
     
         ret = (l1 + l2) * 0.5
         ret = ret.mean() if mean else ret.sum()
-    
+        del h1,h2,h3,l1,l2
+        gc.collect()
+        torch.cuda.empty_cache()
+
         return ret
 
     def loss_neg(self, z1: torch.Tensor, z2: torch.Tensor, mean: bool = True, batch_size=64):
