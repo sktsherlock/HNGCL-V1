@@ -234,6 +234,28 @@ class HNGCL(torch.nn.Module):
             #                             )))
         return torch.cat(losses)
 
+    def batched_simple_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float):
+        # Space complexity: O(BN) (semi_loss: O(N^2))
+
+        device = z1.device
+        num_nodes = z1.size(0)
+        num_batches = (num_nodes - 1) // batch_size + 1
+        f = lambda x: torch.exp(x / self.tau)
+        indices = torch.arange(0, num_nodes).to(device)
+        losses = []
+        # ! Add mixup
+        for i in range(num_batches):
+            mask = indices[i * batch_size:(i + 1) * batch_size]
+            refl_sim = f(self.sim(z1[mask], z1))  # [B, N]
+            between_sim = f(self.sim(z1[mask], z2))  # [B, N]
+            hard_sim = f(self.sim(z1[mask], z3))
+            # hard_sim_inter = f(self.sim(z2[mask], z3))
+
+            losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
+                                     / (between_sim.sum(1) + weight * hard_sim.sum(1))))
+        return torch.cat(losses)
+
+
     def batched_semi_loss_hard_neg(self, z1: torch.Tensor, z2: torch.Tensor, batch_size: int):
         # Space complexity: O(BN) (semi_loss: O(N^2))
         device = z1.device
@@ -279,9 +301,10 @@ class HNGCL(torch.nn.Module):
               torch.cuda.empty_cache()
             l2 = self.semi_loss(h2, h1)
         else:
-            l1 = self.batched_semi_loss(h1, h2, h3, batch_size, weight= weight)
+            l1 = self.batched_simple_loss(h1, h2, h3, batch_size, weight= weight)
+            gc.collect()
             torch.cuda.empty_cache()
-            l2 = self.batched_semi_loss(h2, h1, h3, batch_size, weight= weight)
+            l2 = self.batched_simple_loss(h2, h1, h3, batch_size, weight= weight)
     
         ret = (l1 + l2) * 0.5
         ret = ret.mean() if mean else ret.sum()
