@@ -26,8 +26,41 @@ from pHNGCL.dataset import get_dataset
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
+def train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
+    model.requires_grad_(True)
+    model.train()
+    model_optimizer.zero_grad()
 
-def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight, hard):
+    def drop_edge(idx: int, edge_index, drop_weights):
+        if config['drop_scheme'] == 'uniform':
+            return dropout_adj(edge_index, p=config[f'drop_edge_rate_{idx}'])[0]
+        elif config['drop_scheme'] in ['degree', 'evc', 'pr']:
+            return drop_edge_weighted(edge_index, drop_weights, p=config[f'drop_edge_rate_{idx}'], threshold=0.7)
+        else:
+            raise Exception(f'undefined drop scheme: {config["drop_scheme"]}')
+
+    # topology contrastive graphs
+    edge_index_1 = drop_edge(1, data.edge_index, drop_weights1)
+    # x_1 = drop_feature(data.x, config['drop_feature_rate_1'])
+
+    # feature contrastive graphs
+    edge_index_2 = drop_edge(1, feature_graph_edge_index, drop_weights2)
+    # x_2 = drop_feature(data.x, config['drop_feature_rate_2'])
+
+    if config['drop_scheme'] in ['pr', 'degree', 'evc']:
+        x_1 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_1'])
+        x_2 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_2'])
+
+    z1 = model(x_1, edge_index_1)
+    z2 = model(x_2, edge_index_2)
+
+    loss = model.loss(z1, z2, batch_size=256,)
+    loss.backward(retain_graph=True)
+    model_optimizer.step()
+
+    return loss.item()
+
+def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
     model.requires_grad_(True)
     ADNet.requires_grad_(False)
     model.train()
@@ -53,22 +86,12 @@ def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight, hard):
         x_1 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_1'])
         x_2 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_2'])
 
-    # # topology contrastive graphs
-    # edge_index_1 = dropout_adj(data.edge_index, p=drop_edge_rate_1)[0]
-    # x_1 = drop_feature(data.x, p=drop_feature_rate_1)
-
-    # # feature contrastive graphs
-    # edge_index_2 = dropout_adj(feature_graph_edge_index, p=drop_edge_rate_2)[0]
-    # x_2 = drop_feature(data.x, p=drop_feature_rate_2)
-
     z1 = model(x_1, edge_index_1)
     z2 = model(x_2, edge_index_2)
-    if hard == True:
-        z3 = ADNet(x_1, edge_index_1)
-        z3 = ADNet.Generate_hard(z1, z3)
-        loss = model.loss_neg(z1, z2, z3, batch_size=256, weight=weight)
-    else:
-        loss = model.loss(z1, z2, batch_size=256)
+
+    z3 = ADNet(x_1, edge_index_1)
+    z3 = ADNet.Generate_hard(z1, z3)
+    loss = model.loss_neg(z1, z2, z3, batch_size=256, weight=weight)
 
     loss.backward(retain_graph=True)
     model_optimizer.step()
@@ -424,7 +447,7 @@ if __name__ == '__main__':
                     if epoch < config['stop']:  # 参数
                         _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
             else:
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
+                loss = train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
 
             # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
             #
