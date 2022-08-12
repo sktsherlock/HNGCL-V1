@@ -393,9 +393,9 @@ if __name__ == '__main__':
         best_acc = 0.0
         best_epoch = 0
         wait_times = 0
-        print('warmup phase!')
-        loss_hard = train_hard(drop_weights1, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
-        print('warmup phase final loss:', loss_hard)
+        # print('warmup phase!')
+        # loss_hard = train_hard(drop_weights1, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+        # print('warmup phase final loss:', loss_hard)
 
         for epoch in range(config["num_epochs"]) : #1, param['num_epochs'] + 1
             time_start = time.time()
