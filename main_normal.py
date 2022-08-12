@@ -260,7 +260,7 @@ if __name__ == '__main__':
     parser.add_argument('--tau', type=float, default=0.5)
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--drop_scheme', type=str, default='degree')
-    parser.add_argument('--hard_num', type=int, default=128)
+    parser.add_argument('--hard_num', type=int, default=32)
     parser.add_argument('--SE', type=int, default=30)
     parser.add_argument('--True_gap', type=float, default=0.1)
     parser.add_argument('--False_gap', type=float, default=0.1)
