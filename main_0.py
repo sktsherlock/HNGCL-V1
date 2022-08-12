@@ -438,7 +438,7 @@ if __name__ == '__main__':
             print('warmup phase final loss:', loss_hard)
 
         for epoch in range(config["num_epochs"]) : #1, param['num_epochs'] + 1
-            time_start = time.time()
+            # time_start = time.time()
             # # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, args)
             # loss = train(model, data.x, data.edge_index, feature_graph_edge_index)
             if config['hard'] == True:
@@ -455,11 +455,11 @@ if __name__ == '__main__':
             #     loss_hard_1 = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
             # elif epoch > config['stop'] and epoch % 10 == 0:
             #     loss_hard_1 = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 10, 1)
-            time_end = time.time()
-            time_c= time_end - time_start
-            print('time cost', time_c, 's')
-            if 'train' in log:
-                print(f'(T) | Epoch={epoch:04d}, loss={loss:.4f}') #loss_hard={loss_hard_1:.4f}
+            # time_end = time.time()
+            # time_c= time_end - time_start
+            # print('time cost', time_c, 's')
+            # if 'train' in log:
+            #     print(f'(T) | Epoch={epoch:04d}, loss={loss:.4f}') #loss_hard={loss_hard_1:.4f}
 
             # 先固定eval的间隔区间
             if epoch <= 1200 and epoch % 100 == 0:
