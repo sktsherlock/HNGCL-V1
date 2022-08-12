@@ -27,7 +27,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
 
-def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
+def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight, hard):
     model.requires_grad_(True)
     ADNet.requires_grad_(False)
     model.train()
@@ -66,14 +66,14 @@ def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
     z3 = ADNet(x_1, edge_index_1)
     z3 = ADNet.Generate_hard(z1, z3)
 
-    loss = model.loss(z1, z2, z3, batch_size=256, weight=weight)
+    loss = model.loss(z1, z2, z3, batch_size=256, weight=weight, hard=hard)
     loss.backward(retain_graph=True)
     model_optimizer.step()
 
     return loss.item()
 
 
-def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: int, AD_hard: int, SE: int, True_gap=1, False_gap=1):
+def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: int, AD_hard: int, SE: int, hard, True_gap=1, False_gap=1):
     def drop_edge(idx: int, edge_index, drop_weights):
         if config['drop_scheme'] == 'uniform':
             return dropout_adj(edge_index, p=config[f'drop_edge_rate_{idx}'])[0]
@@ -136,7 +136,7 @@ def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: 
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss(z1, z2, z3, batch_size=256) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss(z1, z2, z3, batch_size=256, hard=hard) #+ Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     parser.add_argument('--AD_rate', type=float, default=0.01)
     parser.add_argument('--sum_number', type=int, default=10)
     parser.add_argument('--mode', type=str, default='normal')
-
+    parser.add_argument('--hard', type=str, default='True')
 
     args = parser.parse_args()
     # ! Wandb settings
@@ -415,22 +415,22 @@ if __name__ == '__main__':
             # # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, args)
             # loss = train(model, data.x, data.edge_index, feature_graph_edge_index)
             if config['mode']=='normal':
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
+                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
                 if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
 
             elif config['mode']=='sum':
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
+                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
                 if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
                 elif epoch > config['stop'] and epoch % config['sum_number'] == 0:
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, config['sum_number'], 1)
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, config['sum_number'], 1, config['hard'])
             elif config['mode']=='sum_simple':
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
+                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
                 if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1,  config['hard'])  # 正常训练时 一次就行
                 elif epoch > config['stop'] and epoch % config['sum_number'] == 0:
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])
 
             # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
             #
