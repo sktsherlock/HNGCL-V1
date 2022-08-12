@@ -54,7 +54,7 @@ def train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, weight)
     z1 = model(x_1, edge_index_1)
     z2 = model(x_2, edge_index_2)
 
-    loss = model.loss(z1, z2, batch_size=256,)
+    loss = model.loss(z1, z2)
     loss.backward(retain_graph=True)
     model_optimizer.step()
 
@@ -99,7 +99,7 @@ def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
     return loss.item()
 
 
-def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: int, AD_hard: int, SE: int, hard, True_gap=1, False_gap=1):
+def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: int, AD_hard: int, SE: int,  True_gap=1, False_gap=1):
     def drop_edge(idx: int, edge_index, drop_weights):
         if config['drop_scheme'] == 'uniform':
             return dropout_adj(edge_index, p=config[f'drop_edge_rate_{idx}'])[0]
@@ -434,7 +434,7 @@ if __name__ == '__main__':
         wait_times = 0
         if config['hard'] == True:
             print('warmup phase!')
-            loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+            loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['SE'], config['True_gap'], config['False_gap'])
             print('warmup phase final loss:', loss_hard)
 
         for epoch in range(config["num_epochs"]) : #1, param['num_epochs'] + 1
@@ -443,9 +443,9 @@ if __name__ == '__main__':
             # loss = train(model, data.x, data.edge_index, feature_graph_edge_index)
             if config['hard'] == True:
                 if config['mode']=='normal':
-                    loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
+                    loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
                     if epoch < config['stop']:  # 参数
-                        _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
+                        _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
             else:
                 loss = train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
 
