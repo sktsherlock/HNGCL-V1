@@ -208,7 +208,7 @@ class HNGCL(torch.nn.Module):
 
         return -torch.log(between_sim.diag() / (refl_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
 
-    def semi_hard_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: Tensor):
+    def semi_hard_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor):
         f = lambda x: torch.exp(x / self.tau)
         if hasattr(torch.cuda, 'empty_cache'):
             torch.cuda.empty_cache()
