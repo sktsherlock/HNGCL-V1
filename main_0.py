@@ -26,7 +26,7 @@ from pHNGCL.dataset import get_dataset
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
-def train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
+def train_normal(feature_graph_edge_index, drop_weights1, drop_weights2):
     model.requires_grad_(True)
     model.train()
     model_optimizer.zero_grad()
@@ -436,18 +436,79 @@ if __name__ == '__main__':
             print('warmup phase!')
             loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['SE'], config['True_gap'], config['False_gap'])
             print('warmup phase final loss:', loss_hard)
-
-        for epoch in range(config["num_epochs"]) : #1, param['num_epochs'] + 1
-            # time_start = time.time()
-            # # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, args)
-            # loss = train(model, data.x, data.edge_index, feature_graph_edge_index)
-            if config['hard'] == True:
-                if config['mode']=='normal':
+            for epoch in range(config["num_epochs"]):
+                if config['mode'] == 'normal':
                     loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
-                    if epoch < config['stop']:  # 参数
-                        _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)  # 正常训练时 一次就行
-            else:
-                loss = train_normal(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
+                    # if epoch < config['stop']:  # 参数
+                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)
+                if epoch <= 1200 and epoch % 100 == 0:
+                    acc = test()
+                    if acc > best_acc:
+                        best_acc = acc
+                        best_epoch = epoch
+                        wait_times = 0
+
+                    else:
+                        wait_times += 1
+                        if wait_times > args.patience:
+                            break
+                    print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
+                    line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
+                    fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
+                    metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
+                    wandb.log(metrics)
+                elif epoch > 1200 and epoch % 50 == 0:
+                    acc = test()
+                    if acc > best_acc:
+                        best_acc = acc
+                        best_epoch = epoch
+                        wait_times = 0
+
+                    else:
+                        wait_times += 1
+                        # if wait_times > args.patience:
+                        #     break
+                    print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
+                    line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
+                    fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
+                    metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
+                    wandb.log(metrics)
+        else:
+            for epoch in range(config["num_epochs"]):  # 1, param['num_epochs'] + 1
+                loss = train_normal(feature_graph_edge_index, drop_weights1, drop_weights2)
+                if epoch <= 1200 and epoch % 100 == 0:
+                    acc = test()
+                    if acc > best_acc:
+                        best_acc = acc
+                        best_epoch = epoch
+                        wait_times = 0
+
+                    else:
+                        wait_times += 1
+                        if wait_times > args.patience:
+                            break
+                    print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
+                    line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
+                    fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
+                    metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
+                    wandb.log(metrics)
+                elif epoch > 1200 and epoch % 50 == 0:
+                    acc = test()
+                    if acc > best_acc:
+                        best_acc = acc
+                        best_epoch = epoch
+                        wait_times = 0
+
+                    else:
+                        wait_times += 1
+                        # if wait_times > args.patience:
+                        #     break
+                    print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
+                    line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
+                    fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
+                    metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
+                    wandb.log(metrics)
+
 
             # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
             #
@@ -462,40 +523,6 @@ if __name__ == '__main__':
             #     print(f'(T) | Epoch={epoch:04d}, loss={loss:.4f}') #loss_hard={loss_hard_1:.4f}
 
             # 先固定eval的间隔区间
-            if epoch <= 1200 and epoch % 100 == 0:
-                acc = test()
-                if acc > best_acc:
-                    best_acc = acc
-                    best_epoch = epoch
-                    wait_times = 0
-
-                else:
-                    wait_times += 1
-                    if wait_times > args.patience:
-                        break
-                print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
-                line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
-                fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
-                metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
-                wandb.log(metrics)
-            elif epoch>1200 and epoch % 50 == 0:
-                acc = test()
-                if acc > best_acc:
-                    best_acc = acc
-                    best_epoch = epoch
-                    wait_times = 0
-
-                else:
-                    wait_times += 1
-                    # if wait_times > args.patience:
-                    #     break
-                print(f'(E) | Epoch={epoch:04d}, avg_acc = {acc}\tBest epoch={best_epoch:04d}, best_acc = {best_acc:.4f}')
-                line_str = '(T) | Epoch={:04d}, loss={:.2f}\t(E) | Epoch={:04d}, avg_acc = {:.4f}\tBest epoch={:04d}, best_acc = {:.4f}\n'
-                fb.write(line_str.format(epoch, loss, epoch, acc, best_epoch, best_acc))
-                metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
-                wandb.log(metrics)
-
-
         acc = test(final=True)
 
         if 'final' in log:
