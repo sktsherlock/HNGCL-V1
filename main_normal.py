@@ -338,7 +338,7 @@ if __name__ == '__main__':
     parser.add_argument('--AD_rate', type=float, default=0.01)
     parser.add_argument('--sum_number', type=int, default=10)
     parser.add_argument('--mode', type=str, default='normal')
-
+    parser.add_argument('--hard', type=str, default='True')
 
     args = parser.parse_args()
     # ! Wandb settings
