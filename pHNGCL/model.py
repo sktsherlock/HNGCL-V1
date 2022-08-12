@@ -208,6 +208,17 @@ class HNGCL(torch.nn.Module):
 
         return -torch.log(between_sim.diag() / (refl_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
 
+    def semi_hard_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: Tensor):
+        f = lambda x: torch.exp(x / self.tau)
+        if hasattr(torch.cuda, 'empty_cache'):
+            torch.cuda.empty_cache()
+        refl_sim = f(self.sim(z1, z1))
+        between_sim = f(self.sim(z1, z2))
+        hard_sim = f(self.sim(z1,z3))
+
+        return -torch.log(between_sim.diag() / (refl_sim.sum(1) + hard_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
+
+
     def batched_semi_loss_hard_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float):
         # Space complexity: O(BN) (semi_loss: O(N^2))
 
@@ -303,11 +314,11 @@ class HNGCL(torch.nn.Module):
         h3 = self.projection(z3)
 
         if batch_size is None:
-            l1 = self.semi_loss(h1, h2)
+            l1 = self.semi_hard_loss(h1, h2, h3)
             if hasattr(torch.cuda, 'empty_cache'):
                 gc.collect()
                 torch.cuda.empty_cache()
-            l2 = self.semi_loss(h2, h1)
+            l2 = self.semi_hard_loss(h2, h1, h3)
         else:
             l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight=weight)
             gc.collect()

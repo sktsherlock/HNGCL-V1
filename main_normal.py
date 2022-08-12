@@ -58,6 +58,40 @@ def train_normal(drop_weights1):
 
     return loss.item()
 
+def train(drop_weights1, weight):
+    ADNet.requires_grad_(False)
+    model.requires_grad_(True)
+    model.train()
+    model_optimizer.zero_grad()
+
+    def drop_edge(idx: int, edge_index, drop_weights):
+        if config['drop_scheme'] == 'uniform':
+            return dropout_adj(edge_index, p=config[f'drop_edge_rate_{idx}'])[0]
+        elif config['drop_scheme'] in ['degree', 'evc', 'pr']:
+            return drop_edge_weighted(edge_index, drop_weights, p=config[f'drop_edge_rate_{idx}'], threshold=0.7)
+        else:
+            raise Exception(f'undefined drop scheme: {config["drop_scheme"]}')
+
+    edge_index_1 = drop_edge(1, data.edge_index, drop_weights1)
+    edge_index_2 = dropout_adj(data.edge_index, p=drop_edge_rate_2)[0]
+    if config['drop_scheme'] in ['pr', 'degree', 'evc']:
+        x_1 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_1'])
+        x_2 = drop_feature_weighted_2(data.x, feature_weights, config['drop_feature_rate_2'])
+    else:
+        x_1 = drop_feature(data.x, config['drop_feature_rate_1'])
+        x_2 = drop_feature(data.x, config['drop_feature_rate_2'])
+
+    z1 = model(x_1, edge_index_1)
+    z2 = model(x_2, edge_index_2)
+
+    z3 = ADNet(x_1, edge_index_1)
+    z3 = ADNet.Generate_hard(z1, z3)
+    loss = model.loss_neg(z1, z2, z3, weight=weight)
+
+    loss.backward(retain_graph=True)
+    model_optimizer.step()
+
+    return loss.item()
 
 # def train(weight):
 #     model.requires_grad_(True)
@@ -162,7 +196,7 @@ def train_hard(drop_weights1, AD_True: int, AD_hard: int, SE: int, True_gap=1, F
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss(z1, z2, z3, batch_size=32) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss_neg(z1, z2, z3) #+ Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -433,7 +467,7 @@ if __name__ == '__main__':
 
             for epoch in range(config["num_epochs"]):
                 if config['mode'] == 'normal':
-                    loss = train_normal(drop_weights1)
+                    loss = train(drop_weights1, config['weight'])
                     # if epoch < config['stop']:  # 参数
                     _ = train_hard(drop_weights1, 1, 1, 1)
                 if epoch <= 1200 and epoch % 100 == 0:
