@@ -63,10 +63,13 @@ def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight, hard):
 
     z1 = model(x_1, edge_index_1)
     z2 = model(x_2, edge_index_2)
-    z3 = ADNet(x_1, edge_index_1)
-    z3 = ADNet.Generate_hard(z1, z3)
+    if hard == True:
+        z3 = ADNet(x_1, edge_index_1)
+        z3 = ADNet.Generate_hard(z1, z3)
+        loss = model.loss_neg(z1, z2, z3, batch_size=256, weight=weight)
+    else:
+        loss = model.loss(z1, z2, batch_size=256)
 
-    loss = model.loss(z1, z2, z3, batch_size=256, weight=weight, hard=hard)
     loss.backward(retain_graph=True)
     model_optimizer.step()
 
@@ -136,7 +139,7 @@ def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: 
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss(z1, z2, z3, batch_size=256, hard=hard) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss_neg(z1, z2, z3, batch_size=256) #+ Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -406,31 +409,22 @@ if __name__ == '__main__':
         best_acc = 0.0
         best_epoch = 0
         wait_times = 0
-        print('warmup phase!')
-        loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
-        print('warmup phase final loss:', loss_hard)
+        if config['hard'] == True:
+            print('warmup phase!')
+            loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+            print('warmup phase final loss:', loss_hard)
 
         for epoch in range(config["num_epochs"]) : #1, param['num_epochs'] + 1
             time_start = time.time()
             # # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, args)
             # loss = train(model, data.x, data.edge_index, feature_graph_edge_index)
-            if config['mode']=='normal':
+            if config['hard'] == True:
+                if config['mode']=='normal':
+                    loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
+                    if epoch < config['stop']:  # 参数
+                        _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
+            else:
                 loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
-                if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
-
-            elif config['mode']=='sum':
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
-                if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])  # 正常训练时 一次就行
-                elif epoch > config['stop'] and epoch % config['sum_number'] == 0:
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, config['sum_number'], 1, config['hard'])
-            elif config['mode']=='sum_simple':
-                loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'], config['hard'])
-                if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1,  config['hard'])  # 正常训练时 一次就行
-                elif epoch > config['stop'] and epoch % config['sum_number'] == 0:
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1, config['hard'])
 
             # loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
             #

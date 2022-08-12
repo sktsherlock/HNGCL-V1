@@ -274,56 +274,54 @@ class HNGCL(torch.nn.Module):
                                         - refl_sim[:, i * batch_size:(i + 1) * batch_size].diag())))
         return torch.cat(losses)
 
-    def loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None, weight = 1.0, hard = True):
+    def loss(self, z1: torch.Tensor, z2: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None):
         h1 = self.projection(z1)
         h2 = self.projection(z2)
-        h3 = self.projection(z3)
-        #print(h1.shape, h3.shape)
-        if hard == True:
-            if batch_size is None:
-                l1 = self.semi_loss(h1, h2)
-                if hasattr(torch.cuda, 'empty_cache'):
-                  gc.collect()
-                  torch.cuda.empty_cache()
-                l2 = self.semi_loss(h2, h1)
-            else:
-                l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight= weight)
-                gc.collect()
-                torch.cuda.empty_cache()
-                l2 = self.batched_semi_loss_hard_neg(h2, h1, h3, batch_size, weight= weight)
+        if batch_size is None:
+            l1 = self.semi_loss(h1, h2)
+            if hasattr(torch.cuda, 'empty_cache'):
+              gc.collect()
+              torch.cuda.empty_cache()
+            l2 = self.semi_loss(h2, h1)
         else:
-            if batch_size is None:
-                l1 = self.semi_loss(h1, h2)
-                if hasattr(torch.cuda, 'empty_cache'):
-                  gc.collect()
-                  torch.cuda.empty_cache()
-                l2 = self.semi_loss(h2, h1)
-            else:
-                l1 = self.batched_semi_loss(h1, h2, batch_size)
-                gc.collect()
-                torch.cuda.empty_cache()
-                l2 = self.batched_semi_loss(h2, h1, batch_size )
+            l1 = self.batched_semi_loss(h1, h2, batch_size)
+            gc.collect()
+            torch.cuda.empty_cache()
+            l2 = self.batched_semi_loss(h2, h1, batch_size )
     
         ret = (l1 + l2) * 0.5
         ret = ret.mean() if mean else ret.sum()
-        del h1,h2,h3,l1,l2
+        del h1,h2,l1,l2
         gc.collect()
         torch.cuda.empty_cache()
 
         return ret
 
-    # def loss_neg(self, z1: torch.Tensor, z2: torch.Tensor, mean: bool = True, batch_size=64):
-    #     #输入：两个GNN出来的表征；   输出：总损失
-    #     h1 = self.projection(z1)
-    #     h2 = self.projection(z2)
-    #
-    #     l1 = self.batched_semi_loss_hard_neg(h1, h2, batch_size, weight= weight)
-    #     l2 = self.batched_semi_loss_hard_neg(h2, h1, batch_size)
-    #
-    #     ret = (l1 + l2) * 0.5
-    #     ret = ret.mean() if mean else ret.sum()
-    #
-    #     return ret
+    def loss_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None, weight = 1.0):
+        h1 = self.projection(z1)
+        h2 = self.projection(z2)
+        h3 = self.projection(z3)
+
+        if batch_size is None:
+            l1 = self.semi_loss(h1, h2)
+            if hasattr(torch.cuda, 'empty_cache'):
+                gc.collect()
+                torch.cuda.empty_cache()
+            l2 = self.semi_loss(h2, h1)
+        else:
+            l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight=weight)
+            gc.collect()
+            torch.cuda.empty_cache()
+            l2 = self.batched_semi_loss_hard_neg(h2, h1, h3, batch_size, weight=weight)
+
+
+        ret = (l1 + l2) * 0.5
+        ret = ret.mean() if mean else ret.sum()
+        del h1, h2, h3, l1, l2
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        return ret
 
 class LogReg(nn.Module):
     def __init__(self, ft_in, nb_classes):
