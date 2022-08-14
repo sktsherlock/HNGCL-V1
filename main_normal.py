@@ -27,7 +27,7 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
 
-def train_normal(drop_weights1):
+def train_normal(drop_weights1, semi):
     ADNet.requires_grad_(False)
     model.requires_grad_(True)
     model.train()
@@ -53,7 +53,7 @@ def train_normal(drop_weights1):
     z1 = model(x_1, edge_index_1)
     z2 = model(x_2, edge_index_2)
 
-    loss = model.loss(z1, z2)
+    loss = model.loss(z1, z2, semi= semi)
     loss.backward(retain_graph=True)
     model_optimizer.step()
 
@@ -343,6 +343,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='normal')
     parser.add_argument('--hard', type=str, default='True')
     parser.add_argument('--warmup', type=str, default='True')
+    parser.add_argument('--semi', type=str, default='False')
 
     args = parser.parse_args()
     # ! Wandb settings
@@ -507,7 +508,7 @@ if __name__ == '__main__':
                     wandb.log(metrics)
         else:
             for epoch in range(config["num_epochs"]):  # 1, param['num_epochs'] + 1
-                loss = train_normal(drop_weights1)
+                loss = train_normal(drop_weights1, config['semi'])
                 if epoch <= 1200 and epoch % 100 == 0:
                     acc = test()
                     if acc > best_acc:
