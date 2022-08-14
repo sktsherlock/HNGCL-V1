@@ -204,15 +204,19 @@ class HNGCL(torch.nn.Module):
             between_sim = f(self.sim(z1, z2))
             return -torch.log(between_sim.diag() /  between_sim.sum(1) )
 
-    def semi_hard_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor):
+    def semi_hard_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, weight: float, semi):
         f = lambda x: torch.exp(x / self.tau)
         if hasattr(torch.cuda, 'empty_cache'):
             torch.cuda.empty_cache()
-        refl_sim = f(self.sim(z1, z1))
-        between_sim = f(self.sim(z1, z2))
-        hard_sim = f(self.sim(z1, z3))
-
-        return -torch.log(between_sim.diag() / (refl_sim.sum(1) + hard_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
+        if semi == 'False':
+            refl_sim = f(self.sim(z1, z1))
+            between_sim = f(self.sim(z1, z2))
+            hard_sim = f(self.sim(z1, z3))
+            return -torch.log(between_sim.diag() / (refl_sim.sum(1) + weight * hard_sim.sum(1) + between_sim.sum(1) - refl_sim.diag()))
+        else:
+            between_sim = f(self.sim(z1, z2))
+            hard_sim = f(self.sim(z1, z3))
+            return -torch.log(between_sim.diag() / (weight * hard_sim.sum(1) + between_sim.sum(1)))
 
     def batched_semi_loss_hard_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float):
         # Space complexity: O(BN) (semi_loss: O(N^2))
@@ -301,17 +305,17 @@ class HNGCL(torch.nn.Module):
 
         return ret
 
-    def loss_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None, weight=1.0):
+    def loss_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, mean: bool = True, batch_size: Optional[int] = None, weight=1.0, semi = False):
         h1 = self.projection(z1)
         h2 = self.projection(z2)
         h3 = self.projection(z3)
 
         if batch_size is None:
-            l1 = self.semi_hard_loss(h1, h2, h3)
+            l1 = self.semi_hard_loss(h1, h2, h3, weight, semi)
             if hasattr(torch.cuda, 'empty_cache'):
                 gc.collect()
                 torch.cuda.empty_cache()
-            l2 = self.semi_hard_loss(h2, h1, h3)
+            l2 = self.semi_hard_loss(h2, h1, h3, weight, semi)
         else:
             l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight=weight)
             gc.collect()

@@ -60,7 +60,7 @@ def train_normal(drop_weights1, semi):
     return loss.item()
 
 
-def train(drop_weights1, weight):
+def train(drop_weights1, weight, semi):
     ADNet.requires_grad_(False)
     model.requires_grad_(True)
     model.train()
@@ -88,7 +88,7 @@ def train(drop_weights1, weight):
 
     z3 = ADNet(x_1, edge_index_1)
     z3 = ADNet.Generate_hard(z1, z3)
-    loss = model.loss_neg(z1, z2, z3, weight=weight)
+    loss = model.loss_neg(z1, z2, z3, weight=weight, semi= semi)
 
     loss.backward(retain_graph=True)
     model_optimizer.step()
@@ -132,7 +132,7 @@ def train(drop_weights1, weight):
 #     return loss.item()
 
 
-def train_hard(drop_weights1, weight, AD_True: int, AD_hard: int, SE: int, True_gap=1, False_gap=1):
+def train_hard(drop_weights1, weight, semi, AD_True: int, AD_hard: int, SE: int, True_gap=1, False_gap=1):
     def drop_edge(idx: int, edge_index, drop_weights):
         if config['drop_scheme'] == 'uniform':
             return dropout_adj(edge_index, p=config[f'drop_edge_rate_{idx}'])[0]
@@ -198,7 +198,7 @@ def train_hard(drop_weights1, weight, AD_True: int, AD_hard: int, SE: int, True_
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss_neg(z1, z2, z3, weight=weight)  # + Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss_neg(z1, z2, z3, weight=weight, semi=semi)  # + Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -464,14 +464,14 @@ if __name__ == '__main__':
         if config['hard'] == True:
             if config['warmup'] == True:
                 print('warmup starting')
-                loss_hard = train_hard(drop_weights1, config['weight'], config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+                loss_hard = train_hard(drop_weights1, config['weight'], config['semi'], config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
                 print('warmup phase final loss:', loss_hard)
 
             for epoch in range(config["num_epochs"]):
                 if config['mode'] == 'normal':
                     loss = train(drop_weights1, config['weight'])
                     if epoch < config['stop']:  # 参数
-                        _ = train_hard(drop_weights1, config['weight'], 1, 1, 1)
+                        _ = train_hard(drop_weights1, config['weight'], config['semi'], 1, 1, 1)
                 elif config['mode'] == 'simple':
                     loss = train(drop_weights1, config['weight'])
                 if epoch <= 1200 and epoch % 100 == 0:
