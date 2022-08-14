@@ -26,6 +26,7 @@ from pHNGCL.dataset import get_dataset
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
+
 def train_normal(drop_weights1):
     ADNet.requires_grad_(False)
     model.requires_grad_(True)
@@ -57,6 +58,7 @@ def train_normal(drop_weights1):
     model_optimizer.step()
 
     return loss.item()
+
 
 def train(drop_weights1, weight):
     ADNet.requires_grad_(False)
@@ -92,6 +94,7 @@ def train(drop_weights1, weight):
     model_optimizer.step()
 
     return loss.item()
+
 
 # def train(weight):
 #     model.requires_grad_(True)
@@ -187,7 +190,6 @@ def train_hard(drop_weights1, AD_True: int, AD_hard: int, SE: int, True_gap=1, F
         del z3
         gc.collect()
 
-
     for i in range(AD_hard):  # 使生成的真实的样本 变得困难
         discriminator.requires_grad_(False)
         model.requires_grad_(False)
@@ -196,7 +198,7 @@ def train_hard(drop_weights1, AD_True: int, AD_hard: int, SE: int, True_gap=1, F
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss_neg(z1, z2, z3) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss_neg(z1, z2, z3)  # + Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -273,8 +275,8 @@ def check_dir(file_name=None):
 
 def record_hyper_parameter(result_file, param):
     fb = open(result_file, 'a+', encoding='utf-8')
-    fb.write('\n'*5)
-    fb.write('-'*30 + ' ' * 5 + 'Hyper parameters in training' + ' ' * 5 + '-'*30 + '\n\n')
+    fb.write('\n' * 5)
+    fb.write('-' * 30 + ' ' * 5 + 'Hyper parameters in training' + ' ' * 5 + '-' * 30 + '\n\n')
     fb.write("total training epoches: {}\n".format(args.num_epochs))
     fb.write("learning rate: {}\n".format(param['learning_rate']))
     fb.write("hidden num: {}\n".format(param['num_hidden']))
@@ -295,15 +297,16 @@ def record_hyper_parameter(result_file, param):
     fb.write("Self enhencment :{}\n".format(param['SE']))
     fb.write("Stop :{}\n".format(param['stop']))
     fb.write("weight :{}\n".format(param['weight']))
-    fb.write('\n' + '-'*30 + ' ' * 5 + 'Hyper parameters in training' + ' ' * 5 + '-'*30 + '\n')
+    fb.write('\n' + '-' * 30 + ' ' * 5 + 'Hyper parameters in training' + ' ' * 5 + '-' * 30 + '\n')
     fb.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--dataset', type=str, default='Coauthor-Phy')
     # parser.add_argument('--seed', type=int, default=39788)
-    parser.add_argument('--seed', type=int, default=120456)#120546
+    parser.add_argument('--seed', type=int, default=120456)  # 120546
     parser.add_argument('--verbose', type=str, default='train,eval,final')
     parser.add_argument('--num_epochs', type=int, default='1500')
     parser.add_argument('--save_split', type=str, nargs='?')
@@ -314,7 +317,7 @@ if __name__ == '__main__':
     parser.add_argument('--theta', type=float, default=0.3)
     parser.add_argument('--patience', type=int, default=10)
     parser.add_argument('--activation', type=str, default='rrelu')
-    parser.add_argument('--base_model', type=str, default= 'GCNConv')
+    parser.add_argument('--base_model', type=str, default='GCNConv')
     parser.add_argument('--k', type=int, default=10)
     parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--num_hidden', type=int, default=64)
@@ -339,6 +342,7 @@ if __name__ == '__main__':
     parser.add_argument('--sum_number', type=int, default=10)
     parser.add_argument('--mode', type=str, default='normal')
     parser.add_argument('--hard', type=str, default='True')
+    parser.add_argument('--warmup', type=str, default='True')
 
     args = parser.parse_args()
     # ! Wandb settings
@@ -381,15 +385,12 @@ if __name__ == '__main__':
                       base_model=get_base_model(config['base_model']), k=config['num_layers']).to(device)
     #
 
-
     discriminator = Discriminator(config['num_hidden'], config['num_proj_hidden'], 1).to(device)
     discriminator_optimizer = torch.optim.Adam(
         discriminator.parameters(),
         lr=config['learning_rate'],
         weight_decay=config['weight_decay']
     )
-
-
 
     ADNet = ADNet(dataset.num_features, config['hard_num'], get_activation(config['activation']),
                   base_model=get_base_model(config['base_model']), k=config['num_layers']).to(device)
@@ -449,7 +450,6 @@ if __name__ == '__main__':
 
     log = args.verbose.split(',')
 
-
     result_file_path = osp.expanduser('~/HNGCL-Experiment/result')
     result_file = osp.join(result_file_path, args.dataset, "{}_epoches_{}NN_on_{}_result.txt".format(config["num_epochs"], config['k'], args.dataset))
     check_dir(result_file)
@@ -461,15 +461,18 @@ if __name__ == '__main__':
         best_epoch = 0
         wait_times = 0
         if config['hard'] == True:
-            print('warmup phase!')
-            loss_hard = train_hard(drop_weights1, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
-            print('warmup phase final loss:', loss_hard)
+            if config['warmup'] == True:
+                print('warmup starting')
+                loss_hard = train_hard(drop_weights1, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+                print('warmup phase final loss:', loss_hard)
 
             for epoch in range(config["num_epochs"]):
                 if config['mode'] == 'normal':
                     loss = train(drop_weights1, config['weight'])
-                    # if epoch < config['stop']:  # 参数
-                    _ = train_hard(drop_weights1, 1, 1, 1)
+                    if epoch < config['stop']:  # 参数
+                        _ = train_hard(drop_weights1, 1, 1, 1)
+                elif config['mode'] == 'simple':
+                    loss = train(drop_weights1, config['weight'])
                 if epoch <= 1200 and epoch % 100 == 0:
                     acc = test()
                     if acc > best_acc:

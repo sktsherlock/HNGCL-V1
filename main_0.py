@@ -91,7 +91,7 @@ def train(feature_graph_edge_index, drop_weights1, drop_weights2, weight):
 
     z3 = ADNet(x_1, edge_index_1)
     z3 = ADNet.Generate_hard(z1, z3)
-    loss = model.loss_neg(z1, z2, z3, batch_size=256, weight=weight)
+    loss = model.loss_neg(z1, z2, z3, weight=weight)
 
     loss.backward(retain_graph=True)
     model_optimizer.step()
@@ -162,7 +162,7 @@ def train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, AD_True: 
         ADNet_optimizer.zero_grad()
         z3 = ADNet(x_1, edge_index_1)
         z3 = ADNet.Generate_hard(z1, z3)
-        loss = - model.loss_neg(z1, z2, z3, batch_size=256) #+ Dis(discriminator, z1, z3) #困难 且 真实;
+        loss = - model.loss_neg(z1, z2, z3) #+ Dis(discriminator, z1, z3) #困难 且 真实;
         loss.backward(retain_graph=True)
         ADNet_optimizer.step()
 
@@ -305,6 +305,7 @@ if __name__ == '__main__':
     parser.add_argument('--sum_number', type=int, default=10)
     parser.add_argument('--mode', type=str, default='normal')
     parser.add_argument('--hard', type=str, default='True')
+    parser.add_argument('--warmup', type=str, default='True')
 
     args = parser.parse_args()
     # ! Wandb settings
@@ -422,6 +423,7 @@ if __name__ == '__main__':
     log = args.verbose.split(',')
 
 
+
     result_file_path = osp.expanduser('~/HNGCL-Experiment/result')
     result_file = osp.join(result_file_path, args.dataset, "{}_epoches_{}NN_on_{}_result.txt".format(config["num_epochs"], config['k'], args.dataset))
     check_dir(result_file)
@@ -433,14 +435,18 @@ if __name__ == '__main__':
         best_epoch = 0
         wait_times = 0
         if config['hard'] == True:
-            print('warmup phase!')
-            loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['SE'], config['True_gap'], config['False_gap'])
-            print('warmup phase final loss:', loss_hard)
+            if config['warmup'] == True:
+                print('warmup starting')
+                loss_hard = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
+                print('warmup phase final loss:', loss_hard)
             for epoch in range(config["num_epochs"]):
                 if config['mode'] == 'normal':
                     loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
                     # if epoch < config['stop']:  # 参数
-                    _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)
+                    if epoch < config['stop']:
+                        _ = train_hard(feature_graph_edge_index, drop_weights1, drop_weights2, 1, 1, 1)
+                elif config['mode'] == 'simple':
+                    loss = train(feature_graph_edge_index, drop_weights1, drop_weights2, config['weight'])
                 if epoch <= 1200 and epoch % 100 == 0:
                     acc = test()
                     if acc > best_acc:
