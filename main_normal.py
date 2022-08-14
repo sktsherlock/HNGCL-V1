@@ -189,7 +189,7 @@ def train_hard(drop_weights1, weight, semi, AD_True: int, AD_hard: int, SE: int,
         import gc
         del z3
         gc.collect()
-
+        torch.cuda.empty_cache()
     for i in range(AD_hard):  # 使生成的真实的样本 变得困难
         discriminator.requires_grad_(False)
         model.requires_grad_(False)
