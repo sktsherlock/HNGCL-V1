@@ -468,7 +468,7 @@ if __name__ == '__main__':
                 loss_hard = train_hard(drop_weights1, config['weight'], config['semi'], config['batch'], config['AD_True'], config['AD_hard'], config['SE'], config['True_gap'], config['False_gap'])
                 print('warmup phase final loss:', loss_hard)
 
-            for epoch in range(config["num_epochs"]):
+            for epoch in range(config["num_epochs"]+1):
                 if config['mode'] == 'normal':
                     loss = train(drop_weights1, config['weight'], config['semi'], config['batch'])
                     if epoch < config['stop']:  # 参数
@@ -508,7 +508,7 @@ if __name__ == '__main__':
                     metrics = {"Acc": acc, "Loss": loss, "Best_acc": best_acc}
                     wandb.log(metrics)
         else:
-            for epoch in range(config["num_epochs"]):  # 1, param['num_epochs'] + 1
+            for epoch in range(config["num_epochs"]+1):  # 1, param['num_epochs'] + 1
                 loss = train_normal(drop_weights1, config['semi'])
 
                 if epoch <= 1200 and epoch % 100 == 0:
