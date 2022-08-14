@@ -509,6 +509,7 @@ if __name__ == '__main__':
         else:
             for epoch in range(config["num_epochs"]):  # 1, param['num_epochs'] + 1
                 loss = train_normal(drop_weights1, config['semi'])
+
                 if epoch <= 1200 and epoch % 100 == 0:
                     acc = test()
                     if acc > best_acc:
