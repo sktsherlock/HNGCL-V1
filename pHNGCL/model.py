@@ -218,7 +218,7 @@ class HNGCL(torch.nn.Module):
             hard_sim = f(self.sim(z1, z3))
             return -torch.log(between_sim.diag() / (weight * hard_sim.sum(1) + between_sim.sum(1)))
 
-    def batched_semi_loss_hard_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float):
+    def batched_semi_loss_hard_neg(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float, semi):
         # Space complexity: O(BN) (semi_loss: O(N^2))
 
         device = z1.device
@@ -228,19 +228,32 @@ class HNGCL(torch.nn.Module):
         indices = torch.arange(0, num_nodes).to(device)
         losses = []
         # ! Add mixup
-        for i in range(num_batches):
-            mask = indices[i * batch_size:(i + 1) * batch_size]
-            refl_sim = f(self.sim(z1[mask], z1))  # [B, N]
-            between_sim = f(self.sim(z1[mask], z2))  # [B, N]
-            hard_sim = f(self.sim(z1[mask], z3))
-            # hard_sim_inter = f(self.sim(z2[mask], z3))
+        if semi == 'False':
+            for i in range(num_batches):
+                mask = indices[i * batch_size:(i + 1) * batch_size]
+                refl_sim = f(self.sim(z1[mask], z1))  # [B, N]
+                between_sim = f(self.sim(z1[mask], z2))  # [B, N]
+                hard_sim = f(self.sim(z1[mask], z3))
+                # hard_sim_inter = f(self.sim(z2[mask], z3))
 
-            losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
-                                     / (refl_sim.sum(1) + between_sim.sum(1) + weight * hard_sim.sum(1)
-                                        - refl_sim[:, i * batch_size:(i + 1) * batch_size].diag())))  # + hard_sim_inter.sum(1)
-            # losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
-            #                          / (between_sim[:, i * batch_size:(i + 1) * batch_size].diag() + hard_sim.sum(1) + hard_sim_inter.sum(1)
-            #                             )))
+                losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
+                                         / (refl_sim.sum(1) + between_sim.sum(1) + weight * hard_sim.sum(1)
+                                            - refl_sim[:, i * batch_size:(i + 1) * batch_size].diag())))  # + hard_sim_inter.sum(1)
+                # losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
+                #                          / (between_sim[:, i * batch_size:(i + 1) * batch_size].diag() + hard_sim.sum(1) + hard_sim_inter.sum(1)
+                #                             )))
+        else:
+            for i in range(num_batches):
+                mask = indices[i * batch_size:(i + 1) * batch_size]
+                between_sim = f(self.sim(z1[mask], z2))  # [B, N]
+                hard_sim = f(self.sim(z1[mask], z3))
+                # hard_sim_inter = f(self.sim(z2[mask], z3))
+
+                losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
+                                         / (between_sim.sum(1) + weight * hard_sim.sum(1))))  # + hard_sim_inter.sum(1)
+                # losses.append(-torch.log(between_sim[:, i * batch_size:(i + 1) * batch_size].diag()
+                #                          / (between_sim[:, i * batch_size:(i + 1) * batch_size].diag() + hard_sim.sum(1) + hard_sim_inter.sum(1)
+                #                             )))
         return torch.cat(losses)
 
     def batched_simple_loss(self, z1: torch.Tensor, z2: torch.Tensor, z3: torch.Tensor, batch_size: int, weight: float):
@@ -317,10 +330,10 @@ class HNGCL(torch.nn.Module):
                 torch.cuda.empty_cache()
             l2 = self.semi_hard_loss(h2, h1, h3, weight, semi)
         else:
-            l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight=weight)
+            l1 = self.batched_semi_loss_hard_neg(h1, h2, h3, batch_size, weight=weight, semi=semi)
             gc.collect()
             torch.cuda.empty_cache()
-            l2 = self.batched_semi_loss_hard_neg(h2, h1, h3, batch_size, weight=weight)
+            l2 = self.batched_semi_loss_hard_neg(h2, h1, h3, batch_size, weight=weight, semi=semi)
 
         ret = (l1 + l2) * 0.5
         ret = ret.mean() if mean else ret.sum()
