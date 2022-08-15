@@ -534,6 +534,8 @@ if __name__ == '__main__':
 
         if 'final' in log:
             print(f'{acc}')
+        if acc > best_acc:
+            best_acc = acc
         wandb.log(metrics)
         fb.write("final result: {:.4f}".format(acc))
         # save_embedding()
